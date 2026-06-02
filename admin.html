@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NOIR Admin — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --noir: #080808;
+      --noir-2: #0f0f0f;
+      --noir-3: #161616;
+      --noir-4: #1e1e1e;
+      --noir-5: #252525;
+      --gold: #c9a96e;
+      --gold-light: #e8c98a;
+      --gold-pale: rgba(201,169,110,0.08);
+      --white: #ffffff;
+      --gray-1: #f0ece4;
+      --gray-2: #9a9590;
+      --gray-3: #555050;
+      --gray-4: #333;
+      --sidebar-w: 260px;
+      --header-h: 70px;
+      --success: #4ade80;
+      --danger: #f87171;
+      --warning: #fbbf24;
+      --info: #60a5fa;
+      --font-d: 'Cormorant Garamond', serif;
+      --font-b: 'Montserrat', sans-serif;
+      --trans: all 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--noir);color:var(--white);font-family:var(--font-b);font-weight:300;font-size:14px;display:flex;min-height:100vh;}
+    a{color:inherit;text-decoration:none;}
+    button{cursor:pointer;border:none;background:none;font-family:inherit;color:inherit;}
+
+    /* Sidebar */
+    .sidebar{
+      width:var(--sidebar-w);
+      background:var(--noir-2);
+      border-right:1px solid rgba(201,169,110,0.1);
+      display:flex;flex-direction:column;
+      position:fixed;top:0;left:0;bottom:0;
+      z-index:100;overflow-y:auto;
+      transition:transform 0.3s ease;
+    }
+    .sidebar-logo{
+      padding:1.5rem 1.5rem 1rem;
+      border-bottom:1px solid rgba(201,169,110,0.1);
+    }
+    .sidebar-logo h1{
+      font-family:var(--font-d);font-size:1.8rem;font-weight:300;
+      letter-spacing:0.4em;
+    }
+    .sidebar-logo h1 span{color:var(--gold);}
+    .sidebar-logo p{font-size:0.6rem;letter-spacing:0.2em;color:var(--gray-3);text-transform:uppercase;margin-top:2px;}
+    .sidebar-nav{flex:1;padding:1rem 0;}
+    .nav-section{margin-bottom:0.5rem;}
+    .nav-section-label{
+      font-size:0.55rem;letter-spacing:0.3em;text-transform:uppercase;
+      color:var(--gray-3);padding:0.75rem 1.5rem 0.4rem;
+    }
+    .nav-item{
+      display:flex;align-items:center;gap:0.75rem;
+      padding:0.7rem 1.5rem;font-size:0.8rem;
+      color:var(--gray-2);transition:var(--trans);
+      border-left:2px solid transparent;cursor:pointer;
+    }
+    .nav-item:hover{color:var(--white);background:rgba(255,255,255,0.03);}
+    .nav-item.active{color:var(--gold);border-left-color:var(--gold);background:var(--gold-pale);}
+    .nav-icon{font-size:1rem;width:18px;text-align:center;flex-shrink:0;}
+    .sidebar-footer{
+      padding:1rem 1.5rem;
+      border-top:1px solid rgba(201,169,110,0.1);
+    }
+    .admin-profile{display:flex;align-items:center;gap:0.75rem;}
+    .admin-avatar{
+      width:36px;height:36px;border-radius:50%;
+      background:var(--gold);color:var(--noir);
+      display:flex;align-items:center;justify-content:center;
+      font-size:0.75rem;font-weight:600;flex-shrink:0;
+    }
+    .admin-name{font-size:0.8rem;}
+    .admin-role{font-size:0.65rem;color:var(--gold);}
+
+    /* Main */
+    .main{
+      margin-left:var(--sidebar-w);
+      flex:1;min-height:100vh;
+      display:flex;flex-direction:column;
+    }
+
+    /* Header */
+    .header{
+      height:var(--header-h);
+      background:var(--noir-2);
+      border-bottom:1px solid rgba(201,169,110,0.1);
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 2rem;
+      position:sticky;top:0;z-index:50;
+    }
+    .header-title{
+      font-family:var(--font-d);font-size:1.4rem;font-weight:300;
+      letter-spacing:0.05em;
+    }
+    .header-right{display:flex;align-items:center;gap:1.5rem;}
+    .header-search{
+      display:flex;align-items:center;gap:0.5rem;
+      background:var(--noir-3);border:1px solid rgba(201,169,110,0.1);
+      padding:0.5rem 1rem;border-radius:2px;
+    }
+    .header-search input{
+      background:none;border:none;outline:none;
+      color:var(--white);font-family:inherit;font-size:0.8rem;width:180px;
+    }
+    .header-search input::placeholder{color:var(--gray-3);}
+    .notif-btn{
+      position:relative;color:var(--gray-2);font-size:1.2rem;
+      transition:color 0.2s;
+    }
+    .notif-btn:hover{color:var(--gold);}
+    .notif-dot{
+      position:absolute;top:-4px;right:-4px;
+      width:8px;height:8px;border-radius:50%;background:var(--gold);
+    }
+
+    /* Content */
+    .content{flex:1;padding:2rem;overflow-x:auto;}
+
+    /* Stats Row */
+    .stats-grid{
+      display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem;
+      margin-bottom:2rem;
+    }
+    .stat-card{
+      background:var(--noir-2);
+      border:1px solid rgba(201,169,110,0.1);
+      padding:1.5rem;
+      position:relative;overflow:hidden;
+      transition:var(--trans);
+    }
+    .stat-card::before{
+      content:'';position:absolute;bottom:0;left:0;right:0;
+      height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);
+      transform:scaleX(0);transition:transform 0.3s;
+    }
+    .stat-card:hover::before{transform:scaleX(1);}
+    .stat-card:hover{border-color:rgba(201,169,110,0.25);}
+    .stat-label{font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gray-3);margin-bottom:0.75rem;}
+    .stat-value{
+      font-family:var(--font-d);font-size:2.2rem;font-weight:300;
+      color:var(--white);margin-bottom:0.5rem;
+    }
+    .stat-trend{
+      display:inline-flex;align-items:center;gap:0.3rem;
+      font-size:0.7rem;padding:2px 8px;
+      border-radius:2px;
+    }
+    .trend-up{background:rgba(74,222,128,0.1);color:var(--success);}
+    .trend-down{background:rgba(248,113,113,0.1);color:var(--danger);}
+    .stat-icon{
+      position:absolute;top:1rem;right:1rem;
+      font-size:1.5rem;opacity:0.15;
+    }
+    .gold-stat .stat-value{
+      background:linear-gradient(135deg,var(--gold-light),var(--gold));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    }
+
+    /* Charts */
+    .charts-row{display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;margin-bottom:2rem;}
+    .card{
+      background:var(--noir-2);
+      border:1px solid rgba(201,169,110,0.1);
+      padding:1.5rem;
+    }
+    .card-header{
+      display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:1.5rem;
+    }
+    .card-title{
+      font-family:var(--font-d);font-size:1.1rem;font-weight:400;
+      letter-spacing:0.05em;
+    }
+    .card-actions{display:flex;gap:0.5rem;}
+    .tab-btn{
+      font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;
+      padding:4px 12px;border:1px solid rgba(201,169,110,0.15);
+      color:var(--gray-3);transition:var(--trans);
+    }
+    .tab-btn:hover,.tab-btn.active{
+      border-color:var(--gold);color:var(--gold);
+      background:var(--gold-pale);
+    }
+
+    /* Table */
+    .table-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;}
+    th{
+      font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;
+      color:var(--gray-3);padding:0.75rem 1rem;text-align:left;
+      border-bottom:1px solid rgba(201,169,110,0.1);white-space:nowrap;
+    }
+    td{
+      padding:0.9rem 1rem;font-size:0.82rem;
+      border-bottom:1px solid rgba(255,255,255,0.03);
+      transition:background 0.2s;
+    }
+    tr:hover td{background:rgba(255,255,255,0.015);}
+    .badge{
+      display:inline-flex;align-items:center;
+      font-size:0.6rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;
+      padding:3px 10px;border-radius:2px;
+    }
+    .badge-pending{background:rgba(251,191,36,0.1);color:var(--warning);}
+    .badge-confirmed{background:rgba(96,165,250,0.1);color:var(--info);}
+    .badge-delivered{background:rgba(74,222,128,0.1);color:var(--success);}
+    .badge-cancelled{background:rgba(248,113,113,0.1);color:var(--danger);}
+    .badge-shipped{background:rgba(167,139,250,0.1);color:#a78bfa;}
+    .table-product{display:flex;align-items:center;gap:0.75rem;}
+    .table-product-img{
+      width:40px;height:50px;background:var(--noir-4);flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      font-family:var(--font-d);font-size:0.6rem;color:var(--gray-3);letter-spacing:0.1em;
+    }
+    .action-btn{
+      font-size:0.75rem;color:var(--gray-2);padding:4px 8px;
+      border:1px solid rgba(255,255,255,0.08);transition:var(--trans);
+    }
+    .action-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+    /* Bottom Row */
+    .bottom-row{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}
+
+    /* Donut Labels */
+    .legend{display:flex;flex-direction:column;gap:0.75rem;margin-top:1.5rem;}
+    .legend-item{display:flex;align-items:center;gap:0.75rem;}
+    .legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .legend-label{font-size:0.75rem;color:var(--gray-2);}
+    .legend-val{margin-left:auto;font-family:var(--font-d);font-size:0.95rem;color:var(--white);}
+
+    /* Quick actions */
+    .quick-actions{display:flex;gap:1rem;margin-bottom:2rem;flex-wrap:wrap;}
+    .qa-btn{
+      display:flex;align-items:center;gap:0.5rem;
+      background:var(--noir-2);border:1px solid rgba(201,169,110,0.15);
+      padding:0.6rem 1.2rem;font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;
+      color:var(--gray-2);transition:var(--trans);
+    }
+    .qa-btn:hover{border-color:var(--gold);color:var(--gold);}
+    .qa-btn span{font-size:1rem;}
+
+    /* Scroll bar */
+    ::-webkit-scrollbar{width:4px;height:4px;}
+    ::-webkit-scrollbar-track{background:var(--noir);}
+    ::-webkit-scrollbar-thumb{background:rgba(201,169,110,0.2);border-radius:2px;}
+
+    /* Notification Panel */
+    .notif-panel{
+      position:fixed;top:var(--header-h);right:0;width:320px;
+      background:var(--noir-2);border-left:1px solid rgba(201,169,110,0.1);
+      height:calc(100vh - var(--header-h));overflow-y:auto;
+      transform:translateX(100%);transition:transform 0.3s;z-index:200;
+    }
+    .notif-panel.open{transform:translateX(0);}
+    .notif-header{padding:1.25rem 1.5rem;border-bottom:1px solid rgba(201,169,110,0.1);}
+    .notif-item{
+      padding:1rem 1.5rem;border-bottom:1px solid rgba(255,255,255,0.03);
+      display:flex;gap:0.75rem;align-items:flex-start;
+    }
+    .notif-dot-status{
+      width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;
+    }
+
+    @media(max-width:1024px){
+      .stats-grid{grid-template-columns:repeat(2,1fr);}
+      .charts-row{grid-template-columns:1fr;}
+      .bottom-row{grid-template-columns:1fr;}
+    }
+    @media(max-width:768px){
+      .sidebar{transform:translateX(-100%);}
+      .sidebar.mobile-open{transform:translateX(0);}
+      .main{margin-left:0;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <h1>NO<span>I</span>R</h1>
+    <p>Admin Panel</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-section-label">Main</div>
+      <div class="nav-item active" onclick="setPage('dashboard')">
+        <span class="nav-icon">▦</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="setPage('orders')">
+        <span class="nav-icon">◈</span> Orders
+        <span style="margin-left:auto;background:var(--gold);color:var(--noir);font-size:0.6rem;padding:1px 7px;">12</span>
+      </div>
+      <div class="nav-item" onclick="setPage('products')">
+        <span class="nav-icon">◻</span> Products
+      </div>
+      <div class="nav-item" onclick="setPage('customers')">
+        <span class="nav-icon">◎</span> Customers
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Catalog</div>
+      <div class="nav-item" onclick="setPage('categories')">
+        <span class="nav-icon">◈</span> Categories
+      </div>
+      <div class="nav-item" onclick="setPage('brands')">
+        <span class="nav-icon">◇</span> Brands
+      </div>
+      <div class="nav-item" onclick="setPage('coupons')">
+        <span class="nav-icon">⊹</span> Coupons
+      </div>
+      <div class="nav-item" onclick="setPage('reviews')">
+        <span class="nav-icon">✦</span> Reviews
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Finance</div>
+      <div class="nav-item">
+        <span class="nav-icon">◈</span> Transactions
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">◎</span> Reports
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">◻</span> Invoices
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">System</div>
+      <div class="nav-item">
+        <span class="nav-icon">◇</span> Settings
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">⊹</span> Backup
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">◈</span> Multi-Store
+      </div>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="admin-profile">
+      <div class="admin-avatar">SA</div>
+      <div>
+        <div class="admin-name">Super Admin</div>
+        <div class="admin-role">Full Access</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <!-- Header -->
+  <header class="header">
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <button style="display:none;font-size:1.2rem;color:var(--gray-2);" id="menuBtn" onclick="toggleSidebar()">☰</button>
+      <h2 class="header-title" id="headerTitle">Dashboard Overview</h2>
+    </div>
+    <div class="header-right">
+      <div class="header-search">
+        <span style="color:var(--gray-3);font-size:0.85rem;">⌕</span>
+        <input type="text" placeholder="Search anything...">
+      </div>
+      <button class="notif-btn" onclick="toggleNotifications()">
+        🔔
+        <span class="notif-dot"></span>
+      </button>
+      <button style="font-size:0.7rem;letter-spacing:0.1em;color:var(--gray-3);" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <div class="content" id="mainContent">
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <button class="qa-btn"><span>＋</span> Add Product</button>
+      <button class="qa-btn"><span>◈</span> New Coupon</button>
+      <button class="qa-btn"><span>◎</span> View Orders</button>
+      <button class="qa-btn"><span>▦</span> Export Report</button>
+      <button class="qa-btn"><span>⌦</span> Backup Now</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card gold-stat">
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-value" id="totalRevenue">$0</div>
+        <span class="stat-trend trend-up" id="revTrend">↑ 0%</span>
+        <div class="stat-icon">$</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Orders Today</div>
+        <div class="stat-value" id="todayOrders">0</div>
+        <span class="stat-trend trend-up">↑ 8.3%</span>
+        <div class="stat-icon">◈</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Customers</div>
+        <div class="stat-value" id="totalCustomers">0</div>
+        <span class="stat-trend trend-up">↑ 12.1%</span>
+        <div class="stat-icon">◎</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Products Listed</div>
+        <div class="stat-value" id="totalProducts">0</div>
+        <span class="stat-trend trend-down" style="background:rgba(248,113,113,0.1);color:var(--danger);">⚠ 4 low stock</span>
+        <div class="stat-icon">◻</div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-row">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Revenue Analytics</span>
+          <div class="card-actions">
+            <button class="tab-btn active" onclick="setChartPeriod('7d', this)">7D</button>
+            <button class="tab-btn" onclick="setChartPeriod('30d', this)">30D</button>
+            <button class="tab-btn" onclick="setChartPeriod('12m', this)">12M</button>
+          </div>
+        </div>
+        <canvas id="revenueChart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Order Status</span>
+        </div>
+        <canvas id="statusChart" height="200"></canvas>
+        <div class="legend" id="statusLegend"></div>
+      </div>
+    </div>
+
+    <!-- Recent Orders Table -->
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div class="card-header">
+        <span class="card-title">Recent Orders</span>
+        <a href="#" style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);">View All →</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Customer</th>
+              <th>Products</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Bottom Row -->
+    <div class="bottom-row">
+      <!-- Top Products -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Top Products</span>
+        </div>
+        <div id="topProducts"></div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Recent Activity</span>
+        </div>
+        <div id="recentActivity" style="display:flex;flex-direction:column;gap:0;"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- Notifications Panel -->
+<div class="notif-panel" id="notifPanel">
+  <div class="notif-header">
+    <div style="font-family:var(--font-d);font-size:1.1rem;">Notifications</div>
+  </div>
+  <div id="notifList"></div>
+</div>
+
+<script>
+const API = '/api/v1';
+
+// ─── Demo Data ────────────────────────────────────────────
+const mockStats = {
+  revenue: { total: 284750, month: 42380, growth: 18.4 },
+  orders: { total: 1847, today: 24, pending: 12 },
+  customers: { total: 3291, new: 187 },
+  products: { total: 342, low_stock: 4 }
+};
+
+const mockOrders = [
+  { id: 'NOIR-250601-001', customer: 'Sarah Al-Rashid', items: 3, amount: 1485, status: 'delivered', date: '2025-06-01' },
+  { id: 'NOIR-250601-002', customer: 'Mohammed Al-Farsi', items: 1, amount: 640, status: 'shipped', date: '2025-06-01' },
+  { id: 'NOIR-250601-003', customer: 'Emma Laurent', items: 2, amount: 805, status: 'confirmed', date: '2025-06-01' },
+  { id: 'NOIR-250601-004', customer: 'James Wilson', items: 1, amount: 195, status: 'pending', date: '2025-06-01' },
+  { id: 'NOIR-250601-005', customer: 'Layla Hassan', items: 4, amount: 2340, status: 'delivered', date: '2025-05-31' },
+  { id: 'NOIR-250531-006', customer: 'Pierre Dubois', items: 2, amount: 1130, status: 'cancelled', date: '2025-05-31' },
+];
+
+const mockTopProducts = [
+  { name: 'Eclipse Watch', sales: 127, revenue: 158750, trend: '+24%' },
+  { name: 'Noir Velvet Blazer', sales: 203, revenue: 98455, trend: '+18%' },
+  { name: 'Gold Leaf Handbag', sales: 89, revenue: 79210, trend: '+31%' },
+  { name: 'Obsidian Silk Dress', sales: 176, revenue: 56320, trend: '+9%' },
+  { name: 'Raven Leather Boots', sales: 144, revenue: 92160, trend: '+15%' },
+];
+
+const mockActivity = [
+  { type: 'order', msg: 'New order #NOIR-250601-003 received', time: '2 min ago', color: '#60a5fa' },
+  { type: 'stock', msg: 'Shadow Cashmere Wrap — low stock (3 left)', time: '18 min ago', color: '#fbbf24' },
+  { type: 'review', msg: 'New 5-star review on Eclipse Watch', time: '45 min ago', color: '#c9a96e' },
+  { type: 'order', msg: 'Order #NOIR-250601-002 shipped', time: '1 hr ago', color: '#4ade80' },
+  { type: 'user', msg: 'New customer: Emma Laurent registered', time: '2 hr ago', color: '#a78bfa' },
+  { type: 'order', msg: 'Payment confirmed for order #NOIR-250601-001', time: '3 hr ago', color: '#4ade80' },
+];
+
+const mockNotifications = [
+  { msg: '12 orders awaiting processing', type: 'order', color: '#c9a96e', time: '5m ago' },
+  { msg: 'Gold Leaf Handbag — only 2 in stock', type: 'stock', color: '#fbbf24', time: '20m ago' },
+  { msg: '3 new customer reviews pending approval', type: 'review', color: '#60a5fa', time: '1h ago' },
+  { msg: 'Monthly backup completed successfully', type: 'system', color: '#4ade80', time: '6h ago' },
+];
+
+// ─── Render ───────────────────────────────────────────────
+function renderStats() {
+  const s = mockStats;
+  document.getElementById('totalRevenue').textContent = '$' + s.revenue.total.toLocaleString();
+  document.getElementById('revTrend').textContent = `↑ ${s.revenue.growth}% this month`;
+  document.getElementById('todayOrders').textContent = s.orders.today;
+  document.getElementById('totalCustomers').textContent = s.customers.total.toLocaleString();
+  document.getElementById('totalProducts').textContent = s.products.total;
+}
+
+function renderOrders() {
+  const statusMap = {
+    pending: 'badge-pending', confirmed: 'badge-confirmed',
+    delivered: 'badge-delivered', cancelled: 'badge-cancelled',
+    shipped: 'badge-shipped'
+  };
+  document.getElementById('ordersTable').innerHTML = mockOrders.map(o => `
+    <tr>
+      <td style="font-family:var(--font-d);color:var(--gold);">${o.id}</td>
+      <td>${o.customer}</td>
+      <td>${o.items} item${o.items > 1 ? 's' : ''}</td>
+      <td style="font-family:var(--font-d);">$${o.amount.toLocaleString()}</td>
+      <td><span class="badge ${statusMap[o.status] || ''}">${o.status}</span></td>
+      <td style="color:var(--gray-2);">${o.date}</td>
+      <td>
+        <button class="action-btn">View</button>
+        <button class="action-btn" style="margin-left:4px;">Edit</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderTopProducts() {
+  document.getElementById('topProducts').innerHTML = mockTopProducts.map((p, i) => `
+    <div style="display:flex;align-items:center;gap:0.75rem;padding:0.9rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+      <div class="table-product-img">${i + 1}</div>
+      <div style="flex:1;">
+        <div style="font-size:0.82rem;margin-bottom:2px;">${p.name}</div>
+        <div style="font-size:0.7rem;color:var(--gray-3);">${p.sales} sold</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-family:var(--font-d);color:var(--gold);">$${p.revenue.toLocaleString()}</div>
+        <div style="font-size:0.65rem;color:#4ade80;">${p.trend}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderActivity() {
+  document.getElementById('recentActivity').innerHTML = mockActivity.map(a => `
+    <div style="display:flex;gap:0.75rem;padding:0.85rem 0;border-bottom:1px solid rgba(255,255,255,0.03);">
+      <div style="width:8px;height:8px;border-radius:50%;background:${a.color};margin-top:5px;flex-shrink:0;"></div>
+      <div>
+        <div style="font-size:0.8rem;">${a.msg}</div>
+        <div style="font-size:0.68rem;color:var(--gray-3);margin-top:2px;">${a.time}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderNotifications() {
+  document.getElementById('notifList').innerHTML = mockNotifications.map(n => `
+    <div class="notif-item">
+      <div class="notif-dot-status" style="background:${n.color}"></div>
+      <div>
+        <div style="font-size:0.8rem;">${n.msg}</div>
+        <div style="font-size:0.68rem;color:var(--gray-3);margin-top:2px;">${n.time}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── Charts ───────────────────────────────────────────────
+let revenueChart, statusChart;
+
+function generateRevenueData(period) {
+  const days = period === '7d' ? 7 : period === '30d' ? 30 : 12;
+  return Array.from({ length: days }, (_, i) => ({
+    label: period === '12m' ? `Month ${i + 1}` : `Day ${i + 1}`,
+    revenue: Math.floor(Math.random() * 8000 + 2000),
+    orders: Math.floor(Math.random() * 30 + 5)
+  }));
+}
+
+function initCharts() {
+  const chartOpts = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: { legend: { display: false }, tooltip: {
+      backgroundColor: 'rgba(15,15,15,0.95)',
+      borderColor: 'rgba(201,169,110,0.2)',
+      borderWidth: 1,
+      titleColor: '#c9a96e',
+      bodyColor: '#9a9590',
+      padding: 12,
+    }},
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false }, ticks: { color: '#555', font: { family: 'Montserrat', size: 10 }}},
+      y: { grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false }, ticks: { color: '#555', font: { family: 'Montserrat', size: 10 }, callback: v => '$' + (v/1000).toFixed(0) + 'k' }}
+    }
+  };
+
+  const data7d = generateRevenueData('7d');
+  revenueChart = new Chart(document.getElementById('revenueChart'), {
+    type: 'line',
+    data: {
+      labels: data7d.map(d => d.label),
+      datasets: [{
+        data: data7d.map(d => d.revenue),
+        borderColor: '#c9a96e',
+        borderWidth: 1.5,
+        fill: true,
+        backgroundColor: (ctx) => {
+          const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
+          g.addColorStop(0, 'rgba(201,169,110,0.12)');
+          g.addColorStop(1, 'rgba(201,169,110,0)');
+          return g;
+        },
+        pointBackgroundColor: '#c9a96e',
+        pointRadius: 3,
+        tension: 0.4
+      }]
+    },
+    options: chartOpts
+  });
+
+  const statusData = { pending: 24, confirmed: 38, shipped: 67, delivered: 142, cancelled: 8 };
+  const statusColors = ['#fbbf24', '#60a5fa', '#a78bfa', '#4ade80', '#f87171'];
+  const statusLabels = Object.keys(statusData);
+  const statusValues = Object.values(statusData);
+
+  statusChart = new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+      labels: statusLabels,
+      datasets: [{ data: statusValues, backgroundColor: statusColors, borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true,
+      cutout: '72%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: 'rgba(15,15,15,0.95)', borderColor: 'rgba(201,169,110,0.2)', borderWidth: 1, titleColor: '#c9a96e', bodyColor: '#9a9590', padding: 10 }
+      }
+    }
+  });
+
+  // Legend
+  document.getElementById('statusLegend').innerHTML = statusLabels.map((l, i) => `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${statusColors[i]}"></div>
+      <span class="legend-label">${l.charAt(0).toUpperCase() + l.slice(1)}</span>
+      <span class="legend-val">${statusValues[i]}</span>
+    </div>
+  `).join('');
+}
+
+function setChartPeriod(period, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const newData = generateRevenueData(period);
+  revenueChart.data.labels = newData.map(d => d.label);
+  revenueChart.data.datasets[0].data = newData.map(d => d.revenue);
+  revenueChart.update();
+}
+
+// ─── UI Controls ──────────────────────────────────────────
+function setPage(page) {
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('headerTitle').textContent = page.charAt(0).toUpperCase() + page.slice(1) + ' Management';
+}
+
+function toggleNotifications() {
+  document.getElementById('notifPanel').classList.toggle('open');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('mobile-open');
+}
+
+function logout() {
+  if (confirm('Are you sure you want to sign out?')) {
+    localStorage.clear();
+    window.location.href = '/login';
+  }
+}
+
+// ─── Init ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderStats();
+  renderOrders();
+  renderTopProducts();
+  renderActivity();
+  renderNotifications();
+  initCharts();
+
+  // Responsive
+  if (window.innerWidth <= 768) {
+    document.getElementById('menuBtn').style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>
