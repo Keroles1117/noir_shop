@@ -4,9 +4,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship, DeclarativeBase
 from sqlalchemy.sql import func
-from sqlalchemy.dialects.postgresql import UUID
-import uuid
-import enum
+import uuid, enum as pyenum
 
 
 class Base(DeclarativeBase):
@@ -17,16 +15,16 @@ def gen_uuid():
     return str(uuid.uuid4())
 
 
-# ─── Enums ────────────────────────────────────────────────────────────────────
+# ── Enums ──────────────────────────────────────────────────────────────────────
 
-class UserRole(str, enum.Enum):
+class UserRole(str, pyenum.Enum):
     SUPER_ADMIN = "super_admin"
     ADMIN = "admin"
     STORE_MANAGER = "store_manager"
     CUSTOMER = "customer"
 
 
-class OrderStatus(str, enum.Enum):
+class OrderStatus(str, pyenum.Enum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
     PROCESSING = "processing"
@@ -36,122 +34,86 @@ class OrderStatus(str, enum.Enum):
     REFUNDED = "refunded"
 
 
-class PaymentStatus(str, enum.Enum):
+class PaymentStatus(str, pyenum.Enum):
     PENDING = "pending"
     PAID = "paid"
     FAILED = "failed"
     REFUNDED = "refunded"
 
 
-class PaymentMethod(str, enum.Enum):
+class PaymentMethod(str, pyenum.Enum):
     COD = "cod"
     STRIPE = "stripe"
     PAYPAL = "paypal"
 
 
-class ProductStatus(str, enum.Enum):
+class ProductStatus(str, pyenum.Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
-    OUT_OF_STOCK = "out_of_stock"
     DRAFT = "draft"
+    OUT_OF_STOCK = "out_of_stock"
 
 
-class CouponType(str, enum.Enum):
+class CouponType(str, pyenum.Enum):
     PERCENTAGE = "percentage"
     FIXED = "fixed"
     FREE_SHIPPING = "free_shipping"
 
 
-class NotificationType(str, enum.Enum):
-    ORDER = "order"
-    STOCK = "stock"
-    REVIEW = "review"
-    SYSTEM = "system"
-
-
-# ─── Association Tables ───────────────────────────────────────────────────────
+# ── Association Tables ─────────────────────────────────────────────────────────
 
 product_tags = Table(
     "product_tags", Base.metadata,
-    Column("product_id", String, ForeignKey("products.id")),
-    Column("tag_id", String, ForeignKey("tags.id"))
+    Column("product_id", String, ForeignKey("products.id", ondelete="CASCADE")),
+    Column("tag_id", String, ForeignKey("tags.id", ondelete="CASCADE"))
 )
 
 wishlist_items = Table(
     "wishlist_items", Base.metadata,
-    Column("user_id", String, ForeignKey("users.id")),
-    Column("product_id", String, ForeignKey("products.id"))
+    Column("user_id", String, ForeignKey("users.id", ondelete="CASCADE")),
+    Column("product_id", String, ForeignKey("products.id", ondelete="CASCADE"))
 )
 
 
-# ─── Store ────────────────────────────────────────────────────────────────────
-
-class Store(Base):
-    __tablename__ = "stores"
-
-    id = Column(String, primary_key=True, default=gen_uuid)
-    name = Column(String(200), nullable=False)
-    slug = Column(String(200), unique=True, nullable=False)
-    description = Column(Text)
-    logo_url = Column(String(500))
-    banner_url = Column(String(500))
-    owner_id = Column(String, ForeignKey("users.id"))
-    is_active = Column(Boolean, default=True)
-    settings = Column(JSON, default={})
-    subscription_plan = Column(String(50), default="free")
-    subscription_expires_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-    owner = relationship("User", back_populates="stores")
-    products = relationship("Product", back_populates="store")
-    orders = relationship("Order", back_populates="store")
-
-
-# ─── User ─────────────────────────────────────────────────────────────────────
+# ── User ───────────────────────────────────────────────────────────────────────
 
 class User(Base):
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, default=gen_uuid)
     email = Column(String(255), unique=True, nullable=False, index=True)
-    username = Column(String(100), unique=True, nullable=False)
+    username = Column(String(100), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     first_name = Column(String(100))
     last_name = Column(String(100))
     phone = Column(String(20))
     avatar_url = Column(String(500))
-    role = Column(Enum(UserRole), default=UserRole.CUSTOMER)
-    is_active = Column(Boolean, default=True)
-    is_verified = Column(Boolean, default=False)
+    role = Column(Enum(UserRole), default=UserRole.CUSTOMER, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    is_verified = Column(Boolean, default=False, nullable=False)
     verification_token = Column(String(255))
     reset_token = Column(String(255))
     reset_token_expires = Column(DateTime(timezone=True))
     preferred_language = Column(String(5), default="en")
     preferred_currency = Column(String(3), default="USD")
     last_login = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    stores = relationship("Store", back_populates="owner")
-    addresses = relationship("Address", back_populates="user")
+    addresses = relationship("Address", back_populates="user", cascade="all, delete-orphan")
     orders = relationship("Order", back_populates="user")
     reviews = relationship("Review", back_populates="user")
     wishlist = relationship("Product", secondary=wishlist_items)
-    notifications = relationship("Notification", back_populates="user")
-    refresh_tokens = relationship("RefreshToken", back_populates="user")
-
-    __table_args__ = (
-        Index("idx_user_email", "email"),
-    )
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
 
 
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
     id = Column(String, primary_key=True, default=gen_uuid)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    token = Column(String(500), unique=True, nullable=False)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    token = Column(String(600), unique=True, nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     is_revoked = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -163,7 +125,7 @@ class Address(Base):
     __tablename__ = "addresses"
 
     id = Column(String, primary_key=True, default=gen_uuid)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     label = Column(String(50), default="Home")
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
@@ -180,7 +142,7 @@ class Address(Base):
     user = relationship("User", back_populates="addresses")
 
 
-# ─── Category & Brand ─────────────────────────────────────────────────────────
+# ── Category & Brand ───────────────────────────────────────────────────────────
 
 class Category(Base):
     __tablename__ = "categories"
@@ -199,7 +161,7 @@ class Category(Base):
     meta_description = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    parent = relationship("Category", remote_side="Category.id")
+    parent = relationship("Category", remote_side="Category.id", back_populates="children")
     children = relationship("Category", back_populates="parent")
     products = relationship("Product", back_populates="category")
 
@@ -227,13 +189,12 @@ class Tag(Base):
     slug = Column(String(100), unique=True, nullable=False)
 
 
-# ─── Product ──────────────────────────────────────────────────────────────────
+# ── Product ────────────────────────────────────────────────────────────────────
 
 class Product(Base):
     __tablename__ = "products"
 
     id = Column(String, primary_key=True, default=gen_uuid)
-    store_id = Column(String, ForeignKey("stores.id"))
     category_id = Column(String, ForeignKey("categories.id"))
     brand_id = Column(String, ForeignKey("brands.id"))
     name_en = Column(String(500), nullable=False)
@@ -244,16 +205,15 @@ class Product(Base):
     short_description_en = Column(String(500))
     short_description_ar = Column(String(500))
     sku = Column(String(100), unique=True)
-    barcode = Column(String(100))
     price = Column(Float, nullable=False)
     old_price = Column(Float)
     cost_price = Column(Float)
-    stock_quantity = Column(Integer, default=0)
+    stock_quantity = Column(Integer, default=0, nullable=False)
     low_stock_threshold = Column(Integer, default=5)
     track_inventory = Column(Boolean, default=True)
     weight = Column(Float)
     dimensions = Column(JSON)
-    status = Column(Enum(ProductStatus), default=ProductStatus.ACTIVE)
+    status = Column(Enum(ProductStatus), default=ProductStatus.ACTIVE, nullable=False)
     is_featured = Column(Boolean, default=False)
     is_new = Column(Boolean, default=True)
     is_bestseller = Column(Boolean, default=False)
@@ -263,17 +223,14 @@ class Product(Base):
     reviews_count = Column(Integer, default=0)
     meta_title = Column(String(255))
     meta_description = Column(Text)
-    og_image = Column(String(500))
-    structured_data = Column(JSON)
     attributes = Column(JSON, default={})
     variants = Column(JSON, default=[])
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    store = relationship("Store", back_populates="products")
     category = relationship("Category", back_populates="products")
     brand = relationship("Brand", back_populates="products")
-    images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
+    images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan", order_by="ProductImage.sort_order")
     tags = relationship("Tag", secondary=product_tags)
     reviews = relationship("Review", back_populates="product")
     order_items = relationship("OrderItem", back_populates="product")
@@ -282,6 +239,7 @@ class Product(Base):
         Index("idx_product_status", "status"),
         Index("idx_product_featured", "is_featured"),
         Index("idx_product_category", "category_id"),
+        Index("idx_product_slug", "slug"),
     )
 
 
@@ -289,7 +247,7 @@ class ProductImage(Base):
     __tablename__ = "product_images"
 
     id = Column(String, primary_key=True, default=gen_uuid)
-    product_id = Column(String, ForeignKey("products.id"), nullable=False)
+    product_id = Column(String, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
     url = Column(String(500), nullable=False)
     thumbnail_url = Column(String(500))
     alt_text = Column(String(255))
@@ -300,21 +258,20 @@ class ProductImage(Base):
     product = relationship("Product", back_populates="images")
 
 
-# ─── Review ───────────────────────────────────────────────────────────────────
+# ── Review ─────────────────────────────────────────────────────────────────────
 
 class Review(Base):
     __tablename__ = "reviews"
 
     id = Column(String, primary_key=True, default=gen_uuid)
-    product_id = Column(String, ForeignKey("products.id"), nullable=False)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    product_id = Column(String, ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     rating = Column(Integer, nullable=False)
     title = Column(String(255))
     body = Column(Text)
     is_verified_purchase = Column(Boolean, default=False)
     is_approved = Column(Boolean, default=True)
     helpful_count = Column(Integer, default=0)
-    images = Column(JSON, default=[])
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     product = relationship("Product", back_populates="reviews")
@@ -325,7 +282,7 @@ class Review(Base):
     )
 
 
-# ─── Coupon ───────────────────────────────────────────────────────────────────
+# ── Coupon ─────────────────────────────────────────────────────────────────────
 
 class Coupon(Base):
     __tablename__ = "coupons"
@@ -343,34 +300,31 @@ class Coupon(Base):
     is_active = Column(Boolean, default=True)
     starts_at = Column(DateTime(timezone=True))
     expires_at = Column(DateTime(timezone=True))
-    applicable_products = Column(JSON, default=[])
-    applicable_categories = Column(JSON, default=[])
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     orders = relationship("Order", back_populates="coupon")
 
 
-# ─── Order ────────────────────────────────────────────────────────────────────
+# ── Order ──────────────────────────────────────────────────────────────────────
 
 class Order(Base):
     __tablename__ = "orders"
 
     id = Column(String, primary_key=True, default=gen_uuid)
-    order_number = Column(String(50), unique=True, nullable=False)
-    store_id = Column(String, ForeignKey("stores.id"))
+    order_number = Column(String(50), unique=True, nullable=False, index=True)
     user_id = Column(String, ForeignKey("users.id"))
     coupon_id = Column(String, ForeignKey("coupons.id"))
-    status = Column(Enum(OrderStatus), default=OrderStatus.PENDING)
-    payment_status = Column(Enum(PaymentStatus), default=PaymentStatus.PENDING)
+    status = Column(Enum(OrderStatus), default=OrderStatus.PENDING, nullable=False)
+    payment_status = Column(Enum(PaymentStatus), default=PaymentStatus.PENDING, nullable=False)
     payment_method = Column(Enum(PaymentMethod), nullable=False)
     payment_intent_id = Column(String(255))
+    paypal_order_id = Column(String(255))
     subtotal = Column(Float, nullable=False)
     discount_amount = Column(Float, default=0)
     shipping_cost = Column(Float, default=0)
     tax_amount = Column(Float, default=0)
     total = Column(Float, nullable=False)
     currency = Column(String(3), default="USD")
-    exchange_rate = Column(Float, default=1.0)
     shipping_address = Column(JSON, nullable=False)
     billing_address = Column(JSON)
     notes = Column(Text)
@@ -378,22 +332,19 @@ class Order(Base):
     carrier = Column(String(100))
     estimated_delivery = Column(DateTime(timezone=True))
     delivered_at = Column(DateTime(timezone=True))
-    cancelled_at = Column(DateTime(timezone=True))
-    cancellation_reason = Column(Text)
     ip_address = Column(String(50))
-    user_agent = Column(String(500))
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    store = relationship("Store", back_populates="orders")
     user = relationship("User", back_populates="orders")
     coupon = relationship("Coupon", back_populates="orders")
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
-    history = relationship("OrderHistory", back_populates="order", cascade="all, delete-orphan")
+    history = relationship("OrderHistory", back_populates="order", cascade="all, delete-orphan", order_by="OrderHistory.created_at")
 
     __table_args__ = (
         Index("idx_order_user", "user_id"),
         Index("idx_order_status", "status"),
+        Index("idx_order_payment_status", "payment_status"),
     )
 
 
@@ -401,8 +352,8 @@ class OrderItem(Base):
     __tablename__ = "order_items"
 
     id = Column(String, primary_key=True, default=gen_uuid)
-    order_id = Column(String, ForeignKey("orders.id"), nullable=False)
-    product_id = Column(String, ForeignKey("products.id"), nullable=False)
+    order_id = Column(String, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
+    product_id = Column(String, ForeignKey("products.id"))
     product_name = Column(String(500), nullable=False)
     product_image = Column(String(500))
     sku = Column(String(100))
@@ -419,7 +370,7 @@ class OrderHistory(Base):
     __tablename__ = "order_history"
 
     id = Column(String, primary_key=True, default=gen_uuid)
-    order_id = Column(String, ForeignKey("orders.id"), nullable=False)
+    order_id = Column(String, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
     status = Column(String(50), nullable=False)
     note = Column(Text)
     created_by = Column(String, ForeignKey("users.id"))
@@ -428,14 +379,14 @@ class OrderHistory(Base):
     order = relationship("Order", back_populates="history")
 
 
-# ─── Notification ─────────────────────────────────────────────────────────────
+# ── Notification ───────────────────────────────────────────────────────────────
 
 class Notification(Base):
     __tablename__ = "notifications"
 
     id = Column(String, primary_key=True, default=gen_uuid)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    type = Column(Enum(NotificationType), nullable=False)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    type = Column(String(50), nullable=False)
     title = Column(String(255), nullable=False)
     message = Column(Text)
     data = Column(JSON)
@@ -445,39 +396,33 @@ class Notification(Base):
     user = relationship("User", back_populates="notifications")
 
 
-# ─── Subscription Plan ────────────────────────────────────────────────────────
+# ── ShippingZone ───────────────────────────────────────────────────────────────
 
-class SubscriptionPlan(Base):
-    __tablename__ = "subscription_plans"
+class ShippingZone(Base):
+    __tablename__ = "shipping_zones"
 
     id = Column(String, primary_key=True, default=gen_uuid)
     name = Column(String(100), nullable=False)
-    slug = Column(String(100), unique=True, nullable=False)
-    price_monthly = Column(Float, nullable=False)
-    price_yearly = Column(Float)
-    features = Column(JSON, default=[])
-    max_products = Column(Integer, default=100)
-    max_orders_per_month = Column(Integer)
-    commission_rate = Column(Float, default=0)
+    countries = Column(JSON, default=[])  # list of ISO country codes
+    base_cost = Column(Float, nullable=False)
+    per_kg_cost = Column(Float, default=0)
+    free_above = Column(Float)
+    estimated_days_min = Column(Integer, default=3)
+    estimated_days_max = Column(Integer, default=7)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
-# ─── Analytics ────────────────────────────────────────────────────────────────
+# ── Analytics ──────────────────────────────────────────────────────────────────
 
-class Analytics(Base):
-    __tablename__ = "analytics"
+class DailyAnalytics(Base):
+    __tablename__ = "daily_analytics"
 
     id = Column(String, primary_key=True, default=gen_uuid)
-    store_id = Column(String, ForeignKey("stores.id"))
-    date = Column(DateTime(timezone=True), nullable=False)
+    date = Column(String(10), unique=True, nullable=False)  # YYYY-MM-DD
     page_views = Column(Integer, default=0)
     unique_visitors = Column(Integer, default=0)
     orders_count = Column(Integer, default=0)
     revenue = Column(Float, default=0)
-    conversion_rate = Column(Float, default=0)
-    data = Column(JSON, default={})
-
-    __table_args__ = (
-        UniqueConstraint("store_id", "date", name="uq_analytics_store_date"),
-    )
+    new_customers = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

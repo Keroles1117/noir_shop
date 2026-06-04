@@ -1,14 +1,13 @@
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Union
+from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import HTTPException, Security, Request, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import HTTPException, Request, status
+import html, re
 from app.core.config import settings
 from loguru import logger
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security = HTTPBearer()
 
 
 class SecurityUtils:
@@ -18,8 +17,8 @@ class SecurityUtils:
         return pwd_context.hash(password)
 
     @staticmethod
-    def verify_password(plain_password: str, hashed_password: str) -> bool:
-        return pwd_context.verify(plain_password, hashed_password)
+    def verify_password(plain: str, hashed: str) -> bool:
+        return pwd_context.verify(plain, hashed)
 
     @staticmethod
     def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -40,47 +39,30 @@ class SecurityUtils:
     @staticmethod
     def decode_token(token: str) -> dict:
         try:
-            payload = jwt.decode(
-                token,
-                settings.JWT_SECRET_KEY,
-                algorithms=[settings.JWT_ALGORITHM]
-            )
-            return payload
+            return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         except JWTError as e:
-            logger.warning(f"JWT decode error: {e}")
+            logger.warning(f"JWT decode failed: {e}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials",
+                detail="Invalid or expired token",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
     @staticmethod
-    def sanitize_input(value: str) -> str:
-        """Basic XSS prevention - strip dangerous characters"""
-        import html
-        return html.escape(value.strip())
+    def sanitize(value: str) -> str:
+        return html.escape(str(value).strip())
 
     @staticmethod
-    def validate_password_strength(password: str) -> bool:
-        """Password must be 8+ chars, have uppercase, lowercase, digit"""
-        import re
+    def validate_password_strength(password: str) -> tuple[bool, str]:
         if len(password) < 8:
-            return False
+            return False, "Password must be at least 8 characters"
         if not re.search(r'[A-Z]', password):
-            return False
+            return False, "Password must contain at least one uppercase letter"
         if not re.search(r'[a-z]', password):
-            return False
+            return False, "Password must contain at least one lowercase letter"
         if not re.search(r'\d', password):
-            return False
-        return True
-
-
-security_utils = SecurityUtils()
-
-
-class CSRFMiddleware:
-    """CSRF protection via double-submit cookie pattern"""
-    pass
+            return False, "Password must contain at least one digit"
+        return True, "OK"
 
 
 def get_client_ip(request: Request) -> str:
@@ -88,3 +70,6 @@ def get_client_ip(request: Request) -> str:
     if forwarded:
         return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
+
+
+security_utils = SecurityUtils()

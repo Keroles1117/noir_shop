@@ -1,80 +1,72 @@
 from pydantic_settings import BaseSettings
-from typing import List, Optional
+from typing import List
 import secrets
 
 
 class Settings(BaseSettings):
-    # App
-    APP_NAME: str = "NOIR Store"
+    APP_NAME: str = "Sadoon Store"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     SECRET_KEY: str = secrets.token_urlsafe(64)
-    ALLOWED_HOSTS: List[str] = ["*"]
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "https://yourdomain.com"]
+    ALLOWED_HOSTS: List[str] = ["sadoon-store.com", "www.sadoon-store.com", "localhost"]
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "https://sadoon-store.com"]
+    SITE_URL: str = "https://sadoon-store.com"
+    SITE_NAME: str = "Sadoon — Luxury Fashion"
 
-    # Database
-    DATABASE_URL: str = "postgresql+asyncpg://noir_user:strongpassword@localhost:5432/noir_db"
+    DATABASE_URL: str = "postgresql+asyncpg://sadoon_user:password@db:5432/sadoon_db"
     DATABASE_POOL_SIZE: int = 10
     DATABASE_MAX_OVERFLOW: int = 20
 
-    # Redis
-    REDIS_URL: str = "redis://localhost:6379/0"
-    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
-    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
+    REDIS_URL: str = "redis://redis:6379/0"
+    CELERY_BROKER_URL: str = "redis://redis:6379/1"
+    CELERY_RESULT_BACKEND: str = "redis://redis:6379/2"
 
-    # JWT
     JWT_SECRET_KEY: str = secrets.token_urlsafe(64)
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
-    # Email
-    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_HOST: str = "smtp.sendgrid.net"
     SMTP_PORT: int = 587
-    SMTP_USER: str = ""
+    SMTP_USER: str = "apikey"
     SMTP_PASSWORD: str = ""
-    EMAILS_FROM_EMAIL: str = "noreply@noir-store.com"
-    EMAILS_FROM_NAME: str = "NOIR Store"
+    EMAILS_FROM_EMAIL: str = "noreply@sadoon-store.com"
+    EMAILS_FROM_NAME: str = "Sadoon Store"
 
-    # File Storage
     UPLOAD_DIR: str = "uploads"
-    MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
+    MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024
     ALLOWED_IMAGE_TYPES: List[str] = ["image/jpeg", "image/png", "image/webp"]
-    # AWS S3 (optional)
     USE_S3: bool = False
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_BUCKET_NAME: str = ""
     AWS_REGION: str = "us-east-1"
+    AWS_CDN_URL: str = ""
 
-    # Payment
     STRIPE_SECRET_KEY: str = ""
     STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
     PAYPAL_CLIENT_ID: str = ""
     PAYPAL_CLIENT_SECRET: str = ""
-    PAYPAL_MODE: str = "sandbox"  # sandbox or live
+    PAYPAL_MODE: str = "sandbox"
 
-    # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60
+    RATE_LIMIT_LOGIN: str = "5/minute"
+    RATE_LIMIT_RESET: str = "3/minute"
 
-    # Admin
-    SUPER_ADMIN_EMAIL: str = "admin@noir-store.com"
-    SUPER_ADMIN_PASSWORD: str = "ChangeMe@123!"
+    SUPER_ADMIN_EMAIL: str = "admin@sadoon-store.com"
+    SUPER_ADMIN_PASSWORD: str = "ChangeMe@2025!"
 
-    # SEO
-    SITE_URL: str = "https://noir-store.com"
-    SITE_NAME: str = "NOIR - Luxury Fashion Store"
+    LOCAL_SHIPPING_COST: float = 5.00
+    INTERNATIONAL_SHIPPING_COST: float = 25.00
+    FREE_SHIPPING_THRESHOLD: float = 200.00
+    TAX_RATE: float = 0.15
 
-    # Multi-currency
     DEFAULT_CURRENCY: str = "USD"
     SUPPORTED_CURRENCIES: List[str] = ["USD", "EUR", "GBP", "SAR", "AED"]
-
-    # Multi-language
     DEFAULT_LANGUAGE: str = "en"
     SUPPORTED_LANGUAGES: List[str] = ["en", "ar"]
 
-    # Backup
     BACKUP_DIR: str = "backups"
     BACKUP_RETENTION_DAYS: int = 30
 
